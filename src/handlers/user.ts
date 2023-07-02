@@ -1,22 +1,14 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 
 import { IRepositoryUser } from "../repositories/user";
-import { ICreateUser } from "../entities";
-
-export interface IHandlerUser {
-  register(
-    req: Request<any, any, ICreateUser>,
-    res: Response,
-  ): Promise<Response>;
-
-  login(req: Request<any, any, ICreateUser>, res: Response): Promise<Response>;
-}
+import { compareHash, hashPassword } from "../auth/bcrypt";
+import { AppRequest, Empty, IHandlerUser, WithUser } from ".";
 
 export function newHandlerUser(repo: IRepositoryUser): IHandlerUser {
   return new HandlerUser(repo);
 }
 
-class HandlerUser {
+class HandlerUser implements IHandlerUser {
   private repo: IRepositoryUser;
 
   constructor(repo: IRepositoryUser) {
@@ -24,10 +16,11 @@ class HandlerUser {
   }
 
   async register(
-    req: Request<any, any, ICreateUser>,
-    res: Response,
+    req: AppRequest<Empty, WithUser>,
+    res: Response
   ): Promise<Response> {
     const { username, password } = req.body;
+
     if (!username || !password) {
       return res
         .status(400)
@@ -35,7 +28,7 @@ class HandlerUser {
     }
 
     return this.repo
-      .createUser({ username, password })
+      .createUser({ username, password: hashPassword(password) })
       .then((newUser) => res.status(201).json(newUser).end())
       .catch((err) => {
         const errMsg = `failed to create user ${username}`;
@@ -46,8 +39,8 @@ class HandlerUser {
   }
 
   async login(
-    req: Request<any, any, ICreateUser>,
-    res: Response,
+    req: AppRequest<Empty, WithUser>,
+    res: Response
   ): Promise<Response> {
     const { username, password } = req.body;
     if (!username || !password) {
@@ -63,7 +56,7 @@ class HandlerUser {
           return res.status(404).json({ error: `no such user: ${username}` });
         }
 
-        if (user.password !== password) {
+        if (!compareHash(password, user.password)) {
           return res.status(401).json({ error: `invalid credentail` });
         }
 

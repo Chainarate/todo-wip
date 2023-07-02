@@ -6,40 +6,36 @@ export interface IRepositoryUser {
   getUserByUsername(username: string): Promise<IUser | null>;
 }
 
-export function newRepositoryUser(): IRepositoryUser {
-  return new RepositoryUserMap();
+export function newRepositoryUser(db: PrismaClient): IRepositoryUser {
+  return new RepositoryUserPG(db);
 }
 
-class RepositoryUserMap {
-  private m: Map<string, IUser>;
-  private id: number;
+// class RepositoryUserMap {
+//   private m: Map<string, IUser>;
+//   private id: number;
 
-  constructor() {
-    this.m = new Map();
-  }
+//   constructor() {
+//     this.m = new Map();
+//   }
 
-  createUser(user: ICreateUser): Promise<IUser> {
-    const newUser = { ...user, id: this.id };
-    this.m.set(user.username, newUser);
-    this.id++;
+//   createUser(user: ICreateUser): Promise<IUser> {
+//     const newUser = { ...user, id: this.id };
+//     this.m.set(user.username, newUser);
+//     this.id++;
 
-    return Promise.resolve(newUser);
-  }
+//     return Promise.resolve(newUser);
+//   }
 
-  getUserByUsername(username: string): Promise<IUser | null> {
-    return Promise.resolve(this.m.get(username) || null);
-  }
-}
+//   getUserByUsername(username: string): Promise<IUser | null> {
+//     return Promise.resolve(this.m.get(username) || null);
+//   }
+// }
 
-class RepositoryUserPG {
+class RepositoryUserPG implements IRepositoryUser {
   private db: PrismaClient;
 
   constructor(db: PrismaClient) {
     this.db = db;
-  }
-
-  async foo(): Promise<number> {
-    return 1; // Promise.resolve(1)
   }
 
   async createUser(user: ICreateUser): Promise<IUser> {
